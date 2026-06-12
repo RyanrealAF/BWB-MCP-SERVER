@@ -21,7 +21,7 @@ async function groqChat(
   model: string,
   systemPrompt: string,
   userContent: string,
-  maxTokens = 400
+  maxTokens = 200
 ): Promise<string> {
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -45,11 +45,11 @@ async function groqChat(
 const NARRATIVE_MODEL  = "llama-3.1-8b-instant";
 const DISTORTION_MODEL = "llama-3.3-70b-versatile";
 
-const SYS_NARRATIVE = "You are the BWB Urban Myth Engine - narrative layer. Take a seed and generate a grounded urban myth. Raw, specific, street-level. No fantasy tropes. No heroes. Real locations, real tensions, real consequences. Write in second person present tense. 150 words max. End mid-thought.";
+const SYS_NARRATIVE  = "Urban myth engine. Input: seed. Output: 100-word street-level myth, second person present tense, end mid-thought. No fantasy. No heroes.";
 
-const SYS_DISTORTION = "You are the BWB Urban Myth Engine - distortion layer. Take a narrative and inject controlled symbolic anomalies. Rules: preserve structure, insert exactly one impossible detail that feels inevitable, do not explain the anomaly, do not resolve contradictions. 150 words max.";
+const SYS_DISTORTION = "Input: myth. Output: same myth with one impossible-but-inevitable detail injected. No explanation. No resolution. 100 words max.";
 
-const SYS_ARCHETYPE = "You are an archetype extractor. Return ONLY a JSON array of 1-3 archetype names. No explanation. No markdown. Example: [\"The Witness\",\"The Corner\",\"The Signal\"]";
+const SYS_ARCHETYPE  = "Input: myth. Output: JSON array only, 1-3 archetype names. Example: [\"The Corner\",\"The Signal\"]";
 
 async function generateMyth(env: Env, seed: string): Promise<{
   seed: string;
