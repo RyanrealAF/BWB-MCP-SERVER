@@ -1,0 +1,21 @@
+{
+  "name": "bwb-mcp-server",
+  "version": "1.0.0",
+  "description": "BWB MCP server — myth engine, GitHub, Cloudflare tools",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "groq-sdk": "^0.7.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^3.0.0"
+  }
+}

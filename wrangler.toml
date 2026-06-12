@@ -1,0 +1,16 @@
+name = "bwb-mcp-server"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+GH_USER = "RyanrealAF"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bwb_memory"
+database_id = "5420ff3e-324b-4c8d-b373-e3487ccb76ab"
+
+[[kv_namespaces]]
+binding = "BWB_NOTES"
+id = "ccf58b9e7d474ba5bc1487678823dfc7"
