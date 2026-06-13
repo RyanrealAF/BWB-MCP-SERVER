@@ -5,7 +5,6 @@ compatibility_flags = ["nodejs_compat"]
 
 # Performance update
 [vars]
-GH_USER = "RyanrealAF"
 
 [[d1_databases]]
 binding = "DB"
