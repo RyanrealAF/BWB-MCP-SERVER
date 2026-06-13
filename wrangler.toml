@@ -15,3 +15,7 @@ database_id = "5420ff3e-324b-4c8d-b373-e3487ccb76ab"
 [[kv_namespaces]]
 binding = "BWB_NOTES"
 id = "ccf58b9e7d474ba5bc1487678823dfc7"
+
+[observability.logs]
+enabled = false
+invocation_logs = true
