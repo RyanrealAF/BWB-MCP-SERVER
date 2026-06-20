@@ -38,6 +38,7 @@ async function groqChat(
       ],
     }),
   });
+  if (!res.ok) { const errText = await res.text(); throw new Error(`Groq API error: ${res.status} ${errText}`); }
   const data = await res.json() as { choices: Array<{ message: { content: string } }> };
   return data.choices?.[0]?.message?.content || "";
 }
@@ -113,6 +114,7 @@ async function ghRequest(token: string, endpoint: string, method = "GET", body?:
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
+  if (!res.ok) { const errText = await res.text(); throw new Error(`GitHub API error: ${res.status} ${errText}`); }
   return res.json();
 }
 function createServer(env: Env): McpServer {
@@ -274,6 +276,102 @@ function createServer(env: Env): McpServer {
     }
   );
 
+
+  server.registerTool(
+    "bwb_kv_put",
+    {
+      title: "Put KV Note",
+      description: "Store a note in BWB_NOTES KV.",
+      inputSchema: z.object({
+        key: z.string().describe("KV key"),
+        value: z.string().describe("Content to store"),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ key, value }) => {
+      await env.BWB_NOTES.put(key, value);
+      return { content: [{ type: "text", text: "Successfully stored: " + key }] };
+    }
+  );
+
+  server.registerTool(
+    "bwb_note_save",
+    {
+      title: "Save Note to D1",
+      description: "Save a structured note to the D1 database.",
+      inputSchema: z.object({
+        id: z.string().describe("Unique note ID"),
+        project: z.string().describe("Project name"),
+        signal_type: z.string().describe("Type of signal (e.g. log, error, metric)"),
+        note: z.string().describe("The note content"),
+        tags: z.string().describe("Comma-separated tags"),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ id, project, signal_type, note, tags }) => {
+      await env.DB.prepare(
+        "INSERT OR REPLACE INTO notes (id, project, timestamp, signal_type, note, tags) VALUES (?, ?, ?, ?, ?, ?)"
+      ).bind(id, project, new Date().toISOString(), signal_type, note, tags).run();
+      return { content: [{ type: "text", text: "Note saved: " + id }] };
+    }
+  );
+
+  server.registerTool(
+    "bwb_note_list",
+    {
+      title: "List Notes from D1",
+      description: "List notes for a project from the D1 database.",
+      inputSchema: z.object({
+        project: z.string().describe("Project name"),
+        limit: z.number().int().min(1).max(100).default(50).describe("Max notes to return"),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ project, limit }) => {
+      const rows = await env.DB.prepare(
+        "SELECT * FROM notes WHERE project = ? ORDER BY timestamp DESC LIMIT ?"
+      ).bind(project, limit).all();
+      return { content: [{ type: "text", text: JSON.stringify(rows.results || [], null, 2) }] };
+    }
+  );
+
+  server.registerTool(
+    "bwb_conv_save",
+    {
+      title: "Save Conversation to D1",
+      description: "Save a conversation history to the D1 database.",
+      inputSchema: z.object({
+        id: z.string().describe("Unique conversation ID"),
+        project: z.string().describe("Project name"),
+        turns: z.string().describe("JSON string of conversation turns"),
+        note_ids: z.string().describe("Comma-separated note IDs referenced"),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ id, project, turns, note_ids }) => {
+      await env.DB.prepare(
+        "INSERT OR REPLACE INTO conversations (id, project, timestamp, turns, note_ids) VALUES (?, ?, ?, ?, ?)"
+      ).bind(id, project, new Date().toISOString(), turns, note_ids).run();
+      return { content: [{ type: "text", text: "Conversation saved: " + id }] };
+    }
+  );
+
+  server.registerTool(
+    "bwb_conv_get",
+    {
+      title: "Get Conversation from D1",
+      description: "Retrieve a conversation history from the D1 database.",
+      inputSchema: z.object({
+        id: z.string().describe("Conversation ID"),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ id }) => {
+      const row = await env.DB.prepare("SELECT * FROM conversations WHERE id = ?").bind(id).first();
+      if (!row) return { content: [{ type: "text", text: "Conversation not found: " + id }] };
+      return { content: [{ type: "text", text: JSON.stringify(row, null, 2) }] };
+    }
+  );
   return server;
 }
 export default {
