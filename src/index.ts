@@ -214,6 +214,50 @@ function createServer(env: Env): McpServer {
   );
 
   server.registerTool(
+    "bwb_gh_push",
+    {
+      title: "Push File to GitHub",
+      description: "Update a file in a RyanrealAF GitHub repository. This will create a new commit.",
+      inputSchema: z.object({
+        repo: z.string().describe("Repository name e.g. BWB-CODE-ASSISTANT"),
+        filepath: z.string().describe("File path within the repo e.g. src/index.ts"),
+        content: z.string().describe("The new content of the file."),
+        commitMessage: z.string().describe("The commit message."),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    },
+    async ({ repo, filepath, content, commitMessage }) => {
+      // Try to get the SHA of the file.
+      const fileData = await ghRequest(env.GH_TOKEN, "/repos/" + env.GH_USER + "/" + repo + "/contents/" + filepath) as { sha?: string; message?: string };
+
+      let sha: string | undefined = undefined;
+      if (fileData.sha) {
+        sha = fileData.sha;
+      } else if (fileData.message && fileData.message !== 'Not Found') {
+        // If there's an error and it's not 'Not Found', then we can't proceed.
+        return { content: [{ type: "text", text: "GitHub error (getting SHA): " + fileData.message }] };
+      }
+
+      const updateResult = await ghRequest(
+        env.GH_TOKEN,
+        "/repos/" + env.GH_USER + "/" + repo + "/contents/" + filepath,
+        "PUT",
+        {
+          message: commitMessage,
+          content: Buffer.from(content).toString("base64"),
+          ...(sha ? { sha } : {}), // Conditionally add sha
+        }
+      ) as { commit?: { sha: string }; message?: string };
+
+      if (updateResult.message) {
+        return { content: [{ type: "text", text: "GitHub error (updating file): " + updateResult.message }] };
+      }
+
+      return { content: [{ type: "text", text: `Successfully committed to ${repo}/${filepath} with commit SHA: ${updateResult.commit?.sha}` }] };
+    }
+  );
+
+  server.registerTool(
     "bwb_kv_get",
     {
       title: "Get KV Note",
